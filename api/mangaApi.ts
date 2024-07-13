@@ -1,81 +1,38 @@
-// Имитация задержки сети
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const API_BASE_URL = 'https://manga-viewer-chuker.amvera.io';
 
-// Функция для генерации URL placeholder-изображения
-const getPlaceholderImage = (width: number, height: number, text: string) => {
-  return `https://placehold.co/${width}x${height}?text=${encodeURIComponent(text)}`;
-};
+export interface Manga {
+  id: number;
+  name: string;
+}
 
-// Фиктивные данные манги с placeholder-изображениями
-const dummyMangaList = [
-  {
-    id: '1',
-    title: 'Naruto',
-    author: 'Masashi Kishimoto',
-    coverImage: getPlaceholderImage(200, 300, 'Naruto'),
-    description: 'Ninja adventure in the hidden village of Konoha.',
-    genres: ['Action', 'Adventure', 'Fantasy']
-  },
-  {
-    id: '2',
-    title: 'One Piece',
-    author: 'Eiichiro Oda',
-    coverImage: getPlaceholderImage(200, 300, 'One Piece'),
-    description: 'Pirate adventure in search of the ultimate treasure.',
-    genres: ['Action', 'Adventure', 'Comedy']
-  },
-  {
-    id: '3',
-    title: 'Attack on Titan',
-    author: 'Hajime Isayama',
-    coverImage: getPlaceholderImage(200, 300, 'Attack on Titan'),
-    description: 'Humanity fights for survival against man-eating giants.',
-    genres: ['Action', 'Dark Fantasy', 'Post-apocalyptic']
-  },
-];
+export interface Chapter {
+  id: number;
+  name: string;
+}
 
-const dummyChapters = [
-  { id: '1', title: 'Chapter 1', pages: 45 },
-  { id: '2', title: 'Chapter 2', pages: 39 },
-  { id: '3', title: 'Chapter 3', pages: 42 },
-];
+export interface ChapterImage {
+  url: string;
+  page: number;
+}
 
-export const fetchMangaList = async () => {
-  await delay(1000); // Имитация задержки сети
-  return dummyMangaList;
-};
+async function fetchApi<T>(endpoint: string): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    headers: {
+      'Accept': 'application/json'
+    }
+  });
 
-export const fetchMangaDetails = async (mangaId: string) => {
-  await delay(800); // Имитация задержки сети
-  const manga = dummyMangaList.find(m => m.id === mangaId);
-  
-  if (manga) {
-    return { ...manga, chapters: dummyChapters };
-  } else {
-    throw new Error('Manga not found');
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
   }
-};
 
-export const fetchMangaPages = async (mangaId: string, chapterId: string) => {
-  await delay(1200); // Имитация задержки сети
-  
-  // Генерируем фиктивные URL страниц с placeholder-изображениями
-  console.log('chapterId', chapterId)
-  const chapter = dummyChapters.find(c => c.id === chapterId);
-  if (chapter) {
-    return Array.from({ length: chapter.pages }, (_, i) => ({
-      pageNumber: i + 1,
-      imageUrl: getPlaceholderImage(800, 1200, `Manga ${mangaId} - Chapter ${chapterId} - Page ${i + 1}`)
-    }));
-  } else {
-    throw new Error('Chapter not found');
-  }
-};
+  return await response.json() as T;
+}
 
-export const searchManga = async (query: string) => {
-  await delay(600); // Имитация задержки сети
-  return dummyMangaList.filter(manga => 
-    manga.title.toLowerCase().includes(query.toLowerCase()) ||
-    manga.author.toLowerCase().includes(query.toLowerCase())
-  );
+export const mangaApi = {
+  getMangaList: () => fetchApi<Manga[]>('/manga'),
+
+  getMangaChapters: (mangaId: number) => fetchApi<Chapter[]>(`/manga/${mangaId}/chapter`),
+
+  getChapterImages: (chapterId: number) => fetchApi<ChapterImage[]>(`/chapter/${chapterId}/images`),
 };

@@ -10,66 +10,37 @@ const router = useRouter()
 const mangaStore = useMangaStore()
 const settingsStore = useSettingsStore()
 
-const { currentManga, currentPage, readingMode, currentPageImage, totalPages } = storeToRefs(mangaStore)
+const { currentManga, currentChapter, currentPage, readingMode, currentPageImage, totalPages, canGoNextPage, canGoPrevPage } = storeToRefs(mangaStore)
 
-const mangaId = computed(() => route.params.id as string)
-const chapterId = computed(() => route.params.chapterId as string)
+const mangaId = computed(() => Number(route.params.id))
+const chapterId = computed(() => Number(route.params.chapterId))
 
 const currentChapterIndex = computed(() => 
-  currentManga.value?.chapters.findIndex(ch => ch.id === chapterId.value) ?? -1
+  mangaStore.currentChapters.findIndex(ch => ch.id === chapterId.value)
 )
 
 const canGoNextChapter = computed(() => 
-  currentChapterIndex.value < (currentManga.value?.chapters.length ?? 0) - 1
+  currentChapterIndex.value < mangaStore.currentChapters.length - 1
 )
 
 const canGoPrevChapter = computed(() => currentChapterIndex.value > 0)
 
-const canGoNextPage = computed(() => 
-  readingMode.value === 'single' && currentPage.value < (totalPages.value - 1)
-)
-
-const canGoPrevPage = computed(() => 
-  readingMode.value === 'single' && currentPage.value > 0
-)
-
-const nextButtonText = computed(() => {
-  if (readingMode.value !== 'single') return 'Next Chapter'
-  return canGoNextPage.value ? 'Next Page' : (canGoNextChapter.value ? 'Next Chapter' : 'Last Page')
-})
-
-const prevButtonText = computed(() => {
-  if (readingMode.value !== 'single') return 'Previous Chapter'
-  return canGoPrevPage.value ? 'Previous Page' : (canGoPrevChapter.value ? 'Previous Chapter' : 'First Page')
-})
-
-const isNextButtonDisabled = computed(() => 
-  (readingMode.value === 'single' && !canGoNextPage.value && !canGoNextChapter.value) ||
-  (readingMode.value !== 'single' && !canGoNextChapter.value)
-)
-
-const isPrevButtonDisabled = computed(() => 
-  (readingMode.value === 'single' && !canGoPrevPage.value && !canGoPrevChapter.value) ||
-  (readingMode.value !== 'single' && !canGoPrevChapter.value)
-)
-
 onMounted(async () => {
-  await mangaStore.loadMangaDetails(mangaId.value)
+  await mangaStore.loadMangaChapters(mangaId.value)
   await loadCurrentChapter()
   
-  const lastPosition = settingsStore.getLastPosition(mangaId.value, chapterId.value)
+  const lastPosition = settingsStore.getLastPosition(String(mangaId.value), String(chapterId.value))
   if (lastPosition !== null) {
     mangaStore.setCurrentPage(lastPosition)
   }
 })
 
 onUnmounted(() => {
-  settingsStore.saveLastPosition(mangaId.value, chapterId.value, currentPage.value)
+  settingsStore.saveLastPosition(String(mangaId.value), String(chapterId.value), currentPage.value)
 })
 
 const loadCurrentChapter = async () => {
-  await mangaStore.loadMangaPages(mangaId.value, chapterId.value)
-  mangaStore.setCurrentPage(0)
+  await mangaStore.loadChapterImages(chapterId.value)
 }
 
 const toggleReadingMode = () => {
@@ -79,33 +50,21 @@ const toggleReadingMode = () => {
   mangaStore.setReadingMode(modes[nextIndex])
 }
 
-const goToNextChapter = () => {
-  if (canGoNextChapter.value) {
-    const nextChapter = currentManga.value?.chapters[currentChapterIndex.value + 1]
-    router.push(`/manga/${mangaId.value}/chapter/${nextChapter?.id}`)
-  }
-}
-
-const goToPrevChapter = () => {
-  if (canGoPrevChapter.value) {
-    const prevChapter = currentManga.value?.chapters[currentChapterIndex.value - 1]
-    router.push(`/manga/${mangaId.value}/chapter/${prevChapter?.id}`)
-  }
-}
-
 const nextPage = () => {
-  if (canGoNextPage.value) {
+  if (readingMode.value === 'single' && canGoNextPage.value) {
     mangaStore.setCurrentPage(currentPage.value + 1)
   } else if (canGoNextChapter.value) {
-    goToNextChapter()
+    const nextChapter = mangaStore.currentChapters[currentChapterIndex.value + 1]
+    router.push(`/manga/${mangaId.value}/chapter/${nextChapter.id}`)
   }
 }
 
 const prevPage = () => {
-  if (canGoPrevPage.value) {
+  if (readingMode.value === 'single' && canGoPrevPage.value) {
     mangaStore.setCurrentPage(currentPage.value - 1)
   } else if (canGoPrevChapter.value) {
-    goToPrevChapter()
+    const prevChapter = mangaStore.currentChapters[currentChapterIndex.value - 1]
+    router.push(`/manga/${mangaId.value}/chapter/${prevChapter.id}`)
   }
 }
 
@@ -150,47 +109,43 @@ const goToPage = (event: Event) => {
 
 <template>
   <div class="manga-reader container mx-auto px-4 py-8">
-    <div v-if="currentManga" class="mb-4">
-      <h1 class="text-2xl font-bold">{{ currentManga.title }}</h1>
-      <p>Chapter: {{ currentManga.chapters.find(ch => ch.id === chapterId)?.title }}</p>
+    <div v-if="currentManga && currentChapter" class="mb-4">
+      <h1 class="text-2xl font-bold">{{ currentManga.name }}</h1>
+      <p>Chapter: {{ currentChapter.name }}</p>
     </div>
     
     <div class="controls mb-4 flex justify-between items-center">
-      <button :disabled="isPrevButtonDisabled" class="btn btn-primary" @click="prevPage">
-        {{ prevButtonText }}
+      <button :disabled="readingMode === 'single' ? !canGoPrevPage : !canGoPrevChapter" class="btn btn-primary" @click="prevPage">
+        {{ readingMode === 'single' ? 'Previous Page' : 'Previous Chapter' }}
       </button>
       <div class="flex items-center">
-        <template v-if="readingMode === 'single' && currentPageImage">
-            <span class="mr-2">Page {{ currentPage + 1 }} of {{ totalPages }}</span>
-        </template>
-        <div class="flex">
-            <select 
-                v-if="readingMode === 'single'"
-                :value="currentPage"
-                class="select select-bordered w-full max-w-xs"
-                @change="goToPage"
-            >
-                <option v-for="page in totalPages" :key="page - 1" :value="page - 1">
-                    {{ page }}
-                </option>
-            </select>
-            <button class="btn btn-secondary ml-2" @click="toggleReadingMode">
-                Mode: {{ readingMode.charAt(0).toUpperCase() + readingMode.slice(1) }}
-            </button>
-        </div>
+        <span class="mr-2">Page {{ currentPage + 1 }} of {{ totalPages }}</span>
+        <select 
+          v-if="readingMode === 'single'"
+          :value="currentPage"
+          class="select select-bordered w-full max-w-xs"
+          @change="goToPage"
+        >
+          <option v-for="page in totalPages" :key="page - 1" :value="page - 1">
+            {{ page }}
+          </option>
+        </select>
+        <button class="btn btn-secondary ml-2" @click="toggleReadingMode">
+          Mode: {{ readingMode.charAt(0).toUpperCase() + readingMode.slice(1) }}
+        </button>
       </div>
-      <button :disabled="isNextButtonDisabled" class="btn btn-primary" @click="nextPage">
-        {{ nextButtonText }}
+      <button :disabled="readingMode === 'single' ? !canGoNextPage : !canGoNextChapter" class="btn btn-primary" @click="nextPage">
+        {{ readingMode === 'single' ? 'Next Page' : 'Next Chapter' }}
       </button>
     </div>
     
     <div :class="pagesContainerClass">
       <template v-if="readingMode === 'vertical' || readingMode === 'horizontal'">
         <img 
-          v-for="page in mangaStore.currentChapterPages" 
-          :key="page.pageNumber" 
-          :src="page.imageUrl" 
-          :alt="`Page ${page.pageNumber}`"
+          v-for="image in mangaStore.currentChapterImages" 
+          :key="image.page" 
+          :src="image.url" 
+          :alt="`Page ${image.page}`"
           class="max-w-full h-auto"
         >
       </template>

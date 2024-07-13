@@ -1,98 +1,58 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { fetchMangaList, fetchMangaDetails, fetchMangaPages } from '../api/mangaApi'
-
-// Определение типов
-interface MangaBasic {
-  id: string;
-  title: string;
-  author: string;
-  coverImage: string;
-  description: string;
-  genres: string[];
-}
-
-interface MangaChapter {
-  id: string;
-  title: string;
-  pages: number;
-}
-
-interface MangaDetailed extends MangaBasic {
-  chapters: MangaChapter[];
-}
-
-interface MangaPage {
-  pageNumber: number;
-  imageUrl: string;
-}
-
-type ReadingMode = 'vertical' | 'horizontal' | 'single';
+import type { Manga, Chapter, ChapterImage } from '../api/mangaApi';
+import { mangaApi } from '../api/mangaApi'
 
 export const useMangaStore = defineStore('manga', () => {
-  const mangaList = ref<MangaBasic[]>([]);
-  const currentManga = ref<MangaDetailed | null>(null);
+  const mangaList = ref<Manga[]>([]);
+  const currentManga = ref<Manga | null>(null);
+  const currentChapters = ref<Chapter[]>([]);
+  const currentChapter = ref<Chapter | null>(null);
+  const currentChapterImages = ref<ChapterImage[]>([]);
   const currentPage = ref<number>(0);
-  const readingMode = ref<ReadingMode>('vertical');
-  const currentChapterPages = ref<MangaPage[]>([]);
+  const readingMode = ref<'vertical' | 'horizontal' | 'single'>('vertical');
 
-  const setMangaList = (list: MangaBasic[]) => {
-    mangaList.value = list;
+  const loadMangaList = async () => {
+    try {
+      mangaList.value = await mangaApi.getMangaList();
+    } catch (error) {
+      console.error('Failed to load manga list:', error);
+    }
   }
 
-  const setCurrentManga = (manga: MangaDetailed | null) => {
-    currentManga.value = manga;
+  const loadMangaChapters = async (mangaId: number) => {
+    try {
+      currentChapters.value = await mangaApi.getMangaChapters(mangaId);
+      currentManga.value = mangaList.value.find(manga => manga.id === mangaId) || null;
+    } catch (error) {
+      console.error('Failed to load manga chapters:', error);
+    }
+  }
+
+  const loadChapterImages = async (chapterId: number) => {
+    try {
+      currentChapterImages.value = await mangaApi.getChapterImages(chapterId);
+      currentPage.value = 0;
+      currentChapter.value = currentChapters.value.find(ch => ch.id === chapterId) || null;
+    } catch (error) {
+      console.error('Failed to load chapter images:', error);
+    }
   }
 
   const setCurrentPage = (page: number) => {
     currentPage.value = page;
   }
 
-  const setReadingMode = (mode: ReadingMode) => {
+  const setReadingMode = (mode: 'vertical' | 'horizontal' | 'single') => {
     readingMode.value = mode;
   }
 
-  const setCurrentChapterPages = (pages: MangaPage[]) => {
-    currentChapterPages.value = pages;
-  }
-
-  const loadMangaList = async () => {
-    try {
-      const list = await fetchMangaList();
-      setMangaList(list);
-    } catch (error) {
-      console.error('Failed to load manga list:', error);
-      // Здесь можно добавить обработку ошибок, например, установку флага ошибки
-    }
-  }
-
-  const loadMangaDetails = async (mangaId: string) => {
-    try {
-      const details = await fetchMangaDetails(mangaId);
-      setCurrentManga(details);
-    } catch (error) {
-      console.error('Failed to load manga details:', error);
-      // Здесь можно добавить обработку ошибок
-    }
-  }
-
-  const loadMangaPages = async (mangaId: string, chapterId: string) => {
-    try {
-      const pages = await fetchMangaPages(mangaId, chapterId);
-      setCurrentChapterPages(pages);
-      setCurrentPage(0); // Сбрасываем текущую страницу при загрузке новой главы
-    } catch (error) {
-      console.error('Failed to load manga pages:', error);
-      // Здесь можно добавить обработку ошибок
-    }
-  }
-
   // Вычисляемые свойства
-  const currentPageImage = computed(() => {
-    return currentChapterPages.value[currentPage.value]?.imageUrl || null;
-  });
+  const currentPageImage = computed(() => 
+    currentChapterImages.value.find(img => img.page === currentPage.value + 1)?.url || null
+  );
 
-  const totalPages = computed(() => currentChapterPages.value.length);
+  const totalPages = computed(() => currentChapterImages.value.length);
 
   const canGoNextPage = computed(() => currentPage.value < totalPages.value - 1);
 
@@ -101,17 +61,19 @@ export const useMangaStore = defineStore('manga', () => {
   return {
     mangaList,
     currentManga,
+    currentChapters,
+    currentChapter,
+    currentChapterImages,
     currentPage,
     readingMode,
-    currentChapterPages,
     currentPageImage,
     totalPages,
     canGoNextPage,
     canGoPrevPage,
-    setCurrentPage,
-    setReadingMode,
     loadMangaList,
-    loadMangaDetails,
-    loadMangaPages
+    loadMangaChapters,
+    loadChapterImages,
+    setCurrentPage,
+    setReadingMode
   }
 })
