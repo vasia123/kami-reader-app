@@ -10,7 +10,7 @@ export const useMangaStore = defineStore('manga', () => {
   const currentChapter = ref<Chapter | null>(null);
   const currentChapterImages = ref<ChapterImage[]>([]);
   const currentPage = ref<number>(0);
-  const readingMode = ref<'vertical' | 'horizontal' | 'single'>('vertical');
+  const readingMode = ref<'vertical' | 'horizontal' | 'single'>('single');
 
   const loadMangaList = async () => {
     try {
