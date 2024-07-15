@@ -23,7 +23,7 @@ onMounted(async () => {
   <div class="app-container">
     <Header />
     <main>
-      <router-view/>
+      <NuxtPage/>
     </main>
     <Footer />
   </div>

@@ -15,10 +15,12 @@ export interface ChapterImage {
   page: number;
 }
 
-async function fetchApi<T>(endpoint: string): Promise<T> {
+async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
     headers: {
-      'Accept': 'application/json'
+      'Accept': 'application/json',
+      ...options.headers,
     }
   });
 
@@ -35,4 +37,22 @@ export const mangaApi = {
   getMangaChapters: (mangaId: number) => fetchApi<Chapter[]>(`/manga/${mangaId}/chapter`),
 
   getChapterImages: (chapterId: number) => fetchApi<ChapterImage[]>(`/chapter/${chapterId}/images`),
+
+  getProgress: (mangaId: number, userId: number) =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    fetchApi<any>(`/manga/${mangaId}/progress?user_id=${userId}`, { method: 'POST' }),
+
+  uploadChapter: (mangaId: number, name: string, images: File[]) => {
+    const formData = new FormData();
+    formData.append('name', name);
+    images.forEach((image, index) => {
+      formData.append('images', image, `page_${index + 1}.${image.name.split('.').pop()}`);
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return fetchApi<any>(`/manga/${mangaId}/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+  },
 };

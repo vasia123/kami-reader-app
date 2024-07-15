@@ -13,10 +13,11 @@
     "@nuxt/eslint": "^0.3.13",
     "@nuxtjs/tailwindcss": "^6.12.1",
     "@pinia/nuxt": "^0.5.1",
+    "daisyui": "^4.12.10",
     "nuxt": "^3.12.3",
     "pinia": "^2.1.7",
-    "daisyui": "^4.12.10",
-    "vue": "latest"
+    "vue": "latest",
+    "vue-draggable-plus": "^0.5.2"
   },
   "packageManager": "pnpm@9.2.0+sha512.98a80fd11c2e7096747762304106432b3ddc67dcf54b5a8c01c93f68a2cd5e05e6821849522a06fb76284d41a2660d5e334f2ee3bbf29183bf2e739b1dafa771",
   "devDependencies": {
