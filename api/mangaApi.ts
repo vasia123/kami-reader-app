@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://manga-viewer-chuker.amvera.io';
+import { fetchWithAuth } from '../utils/apiUtils';
 
 export interface Manga {
   id: number;
@@ -15,32 +15,16 @@ export interface ChapterImage {
   page: number;
 }
 
-async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      'Accept': 'application/json',
-      ...options.headers,
-    }
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-  return await response.json() as T;
-}
-
 export const mangaApi = {
-  getMangaList: () => fetchApi<Manga[]>('/manga'),
+  getMangaList: () => fetchWithAuth<Manga[]>('/manga'),
 
-  getMangaChapters: (mangaId: number) => fetchApi<Chapter[]>(`/manga/${mangaId}/chapter`),
+  getMangaChapters: (mangaId: number) => fetchWithAuth<Chapter[]>(`/manga/${mangaId}/chapter`),
 
-  getChapterImages: (chapterId: number) => fetchApi<ChapterImage[]>(`/chapter/${chapterId}/images`),
+  getChapterImages: (chapterId: number) => fetchWithAuth<ChapterImage[]>(`/chapter/${chapterId}/images`),
 
   getProgress: (mangaId: number, userId: number) =>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    fetchApi<any>(`/manga/${mangaId}/progress?user_id=${userId}`, { method: 'POST' }),
+    fetchWithAuth<any>(`/manga/${mangaId}/progress?user_id=${userId}`, { method: 'POST' }),
 
   uploadChapter: (mangaId: number, name: string, images: File[]) => {
     const formData = new FormData();
@@ -50,7 +34,7 @@ export const mangaApi = {
     });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return fetchApi<any>(`/manga/${mangaId}/upload`, {
+    return fetchWithAuth<any>(`/manga/${mangaId}/upload`, {
       method: 'POST',
       body: formData,
     });
