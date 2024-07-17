@@ -3,13 +3,13 @@
 const API_BASE_URL = 'https://manga-viewer-chuker.amvera.io';
 
 export async function fetchWithAuth<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const telegramSession = localStorage.getItem('telegramSession');
+  const telegramSession = useCookie('telegramSession');
   
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers: {
       'Accept': 'application/json',
-      'Authorization': telegramSession ? `Telegram ${telegramSession}` : '',
+      'Authorization': telegramSession.value ? `Telegram ${telegramSession.value}` : '',
       ...options.headers,
     }
   });
