@@ -1,4 +1,4 @@
-import * as crypto from 'crypto';
+import {createHmac} from 'crypto';
 import type { TelegramWebAppData } from "@/types/telegram-web-app-data";
 
 export const verifyInitData = (telegramInitData: string): boolean => {
@@ -14,8 +14,8 @@ export const verifyInitData = (telegramInitData: string): boolean => {
   }
   const dataCheckString = dataCheck.join("\n");
 
-  const secret = crypto.createHmac('sha256', 'WebAppData').update(process.env.BOT_TOKEN ?? '');
-  const calculatedHash = crypto.createHmac('sha256', secret.digest()).update(dataCheckString).digest('hex');
+  const secret = createHmac('sha256', 'WebAppData').update(process.env.BOT_TOKEN ?? '');
+  const calculatedHash = createHmac('sha256', secret.digest()).update(dataCheckString).digest('hex');
 
   return calculatedHash === hash;
 }

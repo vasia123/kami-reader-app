@@ -3,8 +3,7 @@ export default defineNuxtRouteMiddleware(() => {
 
   const telegramHashString = convertTelegramHashToString();
   if (telegramHashString) {
-    const cookies = useCookie('telegramSession');
-    cookies.value = telegramHashString;
+    localStorage.setItem('telegramSession', telegramHashString);
     location.hash = "";
   }
 });
