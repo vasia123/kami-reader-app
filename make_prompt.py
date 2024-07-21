@@ -58,13 +58,15 @@ def main():
             '*.yaml',
             '*.ico',
             '*.md',
+            '*__init__.py',
         ], 
         help="Шаблоны для исключения файлов и папок"
     )
     parser.add_argument("--output", default="project.txt", help="Имя выходного файла")
+    parser.add_argument("--dir", default='.', help="С какой директорией работать")
     args = parser.parse_args()
 
-    root_directory = '.'  # Текущая папка
+    root_directory = args.dir  # Текущая папка
     include_extensions = args.include if args.include else []
     exclude_patterns = args.exclude
     output_file = args.output

@@ -7,7 +7,9 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "make-front-prompt": "python3 make_prompt.py",
+    "make-back-prompt": "python3 make_prompt.py --dir backend --include .py"
   },
   "dependencies": {
     "@nuxt/eslint": "^0.3.13",
