@@ -229,7 +229,7 @@ const setupIntersectionObserver = () => {
         }
       }
     })
-  }, { threshold: 0.5 })
+  }, { threshold: 0.1 })
 
   updateObservedImages()
 }
@@ -261,19 +261,9 @@ watch([() => mangaStore.readingMode, chapterId], () => {
   setupIntersectionObserver()
   nextTick(() => {
     if (mangaStore.readingMode === 'vertical') {
-      scrollToPage(mangaStore.currentPage + 1)
+      scrollToPage(mangaStore.currentPage)
     } else {
       scrollToTop()
-    }
-  })
-})
-
-// Следим за изменениями в списке изображений текущей главы
-watch(() => mangaStore.currentChapterImages, () => {
-  updateObservedImages()
-  nextTick(() => {
-    if (mangaStore.readingMode === 'vertical') {
-      scrollToPage(mangaStore.currentPage + 1)
     }
   })
 })
@@ -281,7 +271,7 @@ watch(() => mangaStore.currentChapterImages, () => {
 const canGoNextPage = computed(() => {
   return mangaStore.readingMode === 'single'
     ? mangaStore.canGoNextPage
-    : mangaStore.currentPage < mangaStore.totalPages - 1 || canGoNextChapter.value
+    : mangaStore.currentPage < mangaStore.totalPages - 2 || canGoNextChapter.value
 })
 
 const canGoPrevPage = computed(() => {

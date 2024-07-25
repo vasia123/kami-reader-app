@@ -56,7 +56,7 @@ export const useMangaStore = defineStore('manga', () => {
 
   // Вычисляемые свойства
   const currentPageImage = computed(() =>
-    currentChapterImages.value.find(img => img.page === currentPage.value + 1)?.url || null
+    currentChapterImages.value.find(img => img.page === currentPage.value)?.url || null
   );
 
   const totalPages = computed(() => currentChapterImages.value.length);
