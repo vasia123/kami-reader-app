@@ -1,17 +1,17 @@
 <template>
   <div class="manga-reader relative">
-    <!-- Основная область контента -->
-    <div ref="readerContent" :class="pagesContainerClass" @click="toggleNavOverlay">
+    <div ref="readerContent" :class="pagesContainerClass">
       <template v-if="mangaStore.readingMode === 'vertical'">
         <div v-for="(image, index) in mangaStore.currentChapterImages" :key="image.page" class="relative">
           <div v-show="imageLoading" class="absolute inset-0 flex items-center justify-center bg-base-200">
             <span class="loading loading-spinner loading-lg" />
           </div>
-          <img 
-            :src="image.url" 
-            :alt="`Page ${image.page}`" 
-            class="max-w-full h-auto" 
-            :class="{ 'opacity-50': isPageRead(index) }"
+          <img
+            :ref="el => { if (el) setImageRef(el as HTMLImageElement, index) }"
+            :src="image.url"
+            :alt="`Page ${image.page}`"
+            class="max-w-full h-auto"
+            :class="{ 'opacity-50': mangaStore.isPageRead(index) }"
             @load="handleImageLoaded"
           >
         </div>
@@ -22,8 +22,8 @@
             <span class="loading loading-spinner loading-lg" />
           </div>
           <img
-            :src="mangaStore.currentPageImage" 
-            :alt="`Page ${mangaStore.currentPage + 1}`" 
+            :src="mangaStore.currentPageImage"
+            :alt="`Page ${mangaStore.currentPage + 1}`"
             class="max-w-full h-auto"
             @load="handleImageLoaded"
           >
@@ -46,12 +46,13 @@
     />
 
     <!-- Плавающие кнопки навигации с счетчиком страниц -->
-    <div 
+    <div
       class="fixed bottom-4 left-4 right-4 flex justify-between items-center z-40 transition-opacity duration-500"
       :class="{ 'opacity-0': !isInterfaceVisible }"
     >
       <button
-        :disabled="mangaStore.readingMode === 'single' ? !mangaStore.canGoPrevPage : !canGoPrevChapter"
+        v-if="showPrevButton"
+        :disabled="!canGoPrevPage"
         class="btn btn-circle btn-lg bg-base-200 bg-opacity-70 hover:bg-opacity-100"
         @click="prevPage"
       >
@@ -59,6 +60,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
         </svg>
       </button>
+      <span v-else>&nbsp;</span>
       <div class="flex flex-col items-center">
         <button
           class="btn btn-circle btn-lg bg-base-200 bg-opacity-70 hover:bg-opacity-100 mb-2"
@@ -73,7 +75,8 @@
         </span>
       </div>
       <button
-        :disabled="mangaStore.readingMode === 'single' ? !mangaStore.canGoNextPage : !canGoNextChapter"
+        v-if="showNextButton"
+        :disabled="!canGoNextPage"
         class="btn btn-circle btn-lg bg-base-200 bg-opacity-70 hover:bg-opacity-100"
         @click="nextPage"
       >
@@ -81,12 +84,14 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
         </svg>
       </button>
+      <span v-else>&nbsp;</span>
     </div>
   </div>
 </template>
 
+компонента MangaReader.vue">
 <script setup lang="ts">
-import { computed, watch, onMounted, onUnmounted, ref } from 'vue'
+import { computed, watch, onMounted, onUnmounted, ref, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useMangaStore } from '../store/manga'
 import { useSettingsStore } from '../store/settings'
@@ -100,7 +105,6 @@ const settingsStore = useSettingsStore()
 const mangaId = computed(() => Number(route.params.id))
 const chapterId = computed(() => Number(route.params.chapterId))
 
-// Используем композабл для навигации
 const {
   showNavOverlay,
   canGoNextChapter,
@@ -114,14 +118,15 @@ const {
   goToPage
 } = useMangaReaderNavigation(mangaId.value, chapterId.value)
 
-// Новый ref для отслеживания статуса загрузки изображения
 const imageLoading = ref(true)
-
-// Новый ref для управления видимостью интерфейса
 const isInterfaceVisible = ref(true)
-
-// Ref для доступа к содержимому читалки
 const readerContent = ref<HTMLElement | null>(null)
+const imageRefs = ref<(HTMLImageElement | null)[]>([])
+
+const showPrevButton = computed(() => mangaStore.readingMode === 'single' || mangaStore.currentPage === 0)
+const showNextButton = computed(() => mangaStore.readingMode === 'single' || mangaStore.currentPage === mangaStore.totalPages - 1)
+
+let intersectionObserver: IntersectionObserver | null = null
 
 onMounted(async () => {
   await mangaStore.loadMangaChapters(mangaId.value)
@@ -130,11 +135,21 @@ onMounted(async () => {
   const lastPosition = settingsStore.getLastPosition(String(mangaId.value), String(chapterId.value))
   if (lastPosition !== null) {
     mangaStore.setCurrentPage(lastPosition)
+    if (mangaStore.readingMode === 'vertical') {
+      nextTick(() => {
+        scrollToPage(lastPosition)
+      })
+    }
   }
+
+  setupIntersectionObserver()
+  window.addEventListener('keydown', handleKeyDown)
 })
 
 onUnmounted(() => {
   settingsStore.saveLastPosition(String(mangaId.value), String(chapterId.value), mangaStore.currentPage)
+  intersectionObserver?.disconnect()
+  window.removeEventListener('keydown', handleKeyDown)
 })
 
 const loadCurrentChapter = async () => {
@@ -150,57 +165,39 @@ const handleKeyDown = (event: KeyboardEvent) => {
   }
 }
 
-onMounted(() => {
-  window.addEventListener('keydown', handleKeyDown)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeyDown)
-})
-
 watch(chapterId, async (newChapterId, oldChapterId) => {
   if (newChapterId !== oldChapterId) {
     await loadCurrentChapter()
   }
 })
 
-const pagesContainerClass = computed(() => {
-  return {
-    'flex flex-col': mangaStore.readingMode === 'vertical',
-    'flex justify-center': mangaStore.readingMode === 'single'
-  }
-})
+const pagesContainerClass = computed(() => ({
+  'flex flex-col': mangaStore.readingMode === 'vertical',
+  'flex justify-center': mangaStore.readingMode === 'single'
+}))
 
-// Новый метод для обработки завершения загрузки изображения
 const handleImageLoaded = () => {
   imageLoading.value = false
 }
 
-// Функция для проверки, прочитана ли страница
-const isPageRead = (index: number) => {
-  return mangaStore.readingMode === 'vertical' && index <= mangaStore.currentPage
-}
-
-// Обновленные функции для навигации
 const nextPage = () => {
   hideInterface()
+  scrollToTop()
+  navigateNextPage()
   setTimeout(() => {
-    navigateNextPage()
-    scrollToTop()
     showInterface()
   }, 500)
 }
 
 const prevPage = () => {
   hideInterface()
+  scrollToTop()
+  navigatePrevPage()
   setTimeout(() => {
-    navigatePrevPage()
-    scrollToTop()
     showInterface()
   }, 500)
 }
 
-// Функции для управления видимостью интерфейса
 const hideInterface = () => {
   isInterfaceVisible.value = false
 }
@@ -209,27 +206,101 @@ const showInterface = () => {
   isInterfaceVisible.value = true
 }
 
-// Функция для прокрутки к верху страницы
 const scrollToTop = () => {
-  if (readerContent.value) {
-    readerContent.value.scrollTop = 0
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+const scrollToPage = (pageIndex: number) => {
+  const targetImage = imageRefs.value[pageIndex]
+  if (targetImage) {
+    targetImage.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 }
+
+const setupIntersectionObserver = () => {
+  intersectionObserver?.disconnect()
+
+  intersectionObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        const index = imageRefs.value.findIndex(img => img === entry.target)
+        if (index !== -1) {
+          mangaStore.setCurrentPage(index)
+        }
+      }
+    })
+  }, { threshold: 0.5 })
+
+  updateObservedImages()
+}
+
+const updateObservedImages = () => {
+  if (!intersectionObserver) return
+
+  // Сначала прекращаем наблюдение за всеми изображениями
+  imageRefs.value.forEach(img => {
+    if (img) intersectionObserver?.unobserve(img)
+  })
+
+  // Затем начинаем наблюдение за актуальными изображениями
+  imageRefs.value.forEach(img => {
+    if (img) intersectionObserver?.observe(img)
+  })
+}
+
+const setImageRef = (el: HTMLImageElement | null, index: number) => {
+  if (el !== imageRefs.value[index]) {
+    imageRefs.value[index] = el
+    nextTick(updateObservedImages)
+  }
+}
+
+// Следим за изменениями в режиме чтения и текущей главе
+watch([() => mangaStore.readingMode, chapterId], () => {
+  imageRefs.value = []
+  setupIntersectionObserver()
+  nextTick(() => {
+    if (mangaStore.readingMode === 'vertical') {
+      scrollToPage(mangaStore.currentPage + 1)
+    } else {
+      scrollToTop()
+    }
+  })
+})
+
+// Следим за изменениями в списке изображений текущей главы
+watch(() => mangaStore.currentChapterImages, () => {
+  updateObservedImages()
+  nextTick(() => {
+    if (mangaStore.readingMode === 'vertical') {
+      scrollToPage(mangaStore.currentPage + 1)
+    }
+  })
+})
+
+const canGoNextPage = computed(() => {
+  return mangaStore.readingMode === 'single'
+    ? mangaStore.canGoNextPage
+    : mangaStore.currentPage < mangaStore.totalPages - 1 || canGoNextChapter.value
+})
+
+const canGoPrevPage = computed(() => {
+  return mangaStore.readingMode === 'single'
+    ? mangaStore.canGoPrevPage
+    : mangaStore.currentPage > 0 || canGoPrevChapter.value
+})
 </script>
 
 <style scoped>
 .manga-reader {
-  min-height: calc(100vh - 64px);
-  /* Adjust based on your header height */
+  min-height: calc(100vh - 64px); /* Настройте в соответствии с высотой вашего заголовка */
 }
 
-/* Ensure images take full width in vertical mode */
 .flex-col img {
   width: 100%;
   height: auto;
 }
 
-/* Custom scrollbar for horizontal mode */
 .overflow-x-auto {
   scrollbar-width: thin;
   scrollbar-color: theme('colors.primary') theme('colors.base-200');

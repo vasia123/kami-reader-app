@@ -11,6 +11,7 @@ export const useMangaStore = defineStore('manga', () => {
   const currentChapterImages = ref<ChapterImage[]>([]);
   const currentPage = ref<number>(0);
   const readingMode = ref<'vertical' | 'single'>('single');
+  const readPages = ref<Set<number>>(new Set());
 
   const loadMangaList = async () => {
     try {
@@ -34,6 +35,7 @@ export const useMangaStore = defineStore('manga', () => {
       currentChapterImages.value = await mangaApi.getChapterImages(chapterId);
       currentPage.value = 0;
       currentChapter.value = currentChapters.value.find(ch => ch.id === chapterId) || null;
+      readPages.value = new Set(); // Сброс прочитанных страниц при загрузке новой главы
     } catch (error) {
       console.error('Failed to load chapter images:', error);
     }
@@ -41,6 +43,11 @@ export const useMangaStore = defineStore('manga', () => {
 
   const setCurrentPage = (page: number) => {
     currentPage.value = page;
+    markPageAsRead(page);
+  }
+  
+  const markPageAsRead = (page: number) => {
+    readPages.value.add(page);
   }
 
   const setReadingMode = (mode: 'vertical' | 'single') => {
@@ -48,7 +55,7 @@ export const useMangaStore = defineStore('manga', () => {
   }
 
   // Вычисляемые свойства
-  const currentPageImage = computed(() => 
+  const currentPageImage = computed(() =>
     currentChapterImages.value.find(img => img.page === currentPage.value + 1)?.url || null
   );
 
@@ -57,6 +64,8 @@ export const useMangaStore = defineStore('manga', () => {
   const canGoNextPage = computed(() => currentPage.value < totalPages.value - 1);
 
   const canGoPrevPage = computed(() => currentPage.value > 0);
+
+  const isPageRead = (pageIndex: number) => readPages.value.has(pageIndex);
 
   return {
     mangaList,
@@ -74,6 +83,8 @@ export const useMangaStore = defineStore('manga', () => {
     loadMangaChapters,
     loadChapterImages,
     setCurrentPage,
-    setReadingMode
+    setReadingMode,
+    markPageAsRead,
+    isPageRead
   }
 })

@@ -1,8 +1,8 @@
 <template>
     <div
 v-if="showNavOverlay"
-        class="nav-overlay fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
-        @click="hideOverlay">
+        class="nav-overlay fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center transition-opacity duration-500"
+        :class="{ 'opacity-0': !isInterfaceVisible }" @click="hideOverlay">
         <div class="bg-base-100 p-4 rounded-lg shadow-lg">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-lg font-bold">{{ mangaStore.currentManga?.name }} - {{ mangaStore.currentChapter?.name
@@ -49,10 +49,11 @@ defineProps<{
     showNavOverlay: boolean
     canGoPrevChapter: boolean
     canGoNextChapter: boolean
+    isInterfaceVisible: boolean
 }>()
 
 const emit = defineEmits<{
-    (e: 'toggle-nav-overlay' | 'prev-page'|  'next-page'|  'toggle-reading-mode'): void
+    (e: 'toggle-nav-overlay' | 'prev-page' | 'next-page' | 'toggle-reading-mode'): void
     (e: 'hide-overlay', event: MouseEvent): void
     (e: 'go-to-page', event: Event): void
 }>()
