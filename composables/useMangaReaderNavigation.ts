@@ -1,9 +1,7 @@
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { useMangaStore } from '../store/manga'
 
 export function useMangaReaderNavigation(mangaId: number, chapterId: number) {
-    const router = useRouter()
     const mangaStore = useMangaStore()
 
     const showNavOverlay = ref(false)
@@ -24,8 +22,7 @@ export function useMangaReaderNavigation(mangaId: number, chapterId: number) {
         if (mangaStore.readingMode === 'single' && mangaStore.canGoNextPage) {
             mangaStore.setCurrentPage(mangaStore.currentPage + 1)
         } else if (canGoNextChapter.value) {
-            const nextChapter = mangaStore.currentChapters[currentChapterIndex.value + 1]
-            router.push(`/manga/${mangaId}/chapter/${nextChapter.id}`)
+            mangaStore.goToNextChapter()
         }
     }
 
@@ -33,8 +30,7 @@ export function useMangaReaderNavigation(mangaId: number, chapterId: number) {
         if (mangaStore.readingMode === 'single' && mangaStore.canGoPrevPage) {
             mangaStore.setCurrentPage(mangaStore.currentPage - 1)
         } else if (canGoPrevChapter.value) {
-            const prevChapter = mangaStore.currentChapters[currentChapterIndex.value - 1]
-            router.push(`/manga/${mangaId}/chapter/${prevChapter.id}`)
+            mangaStore.goToPrevChapter()
         }
     }
 

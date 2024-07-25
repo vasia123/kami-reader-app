@@ -43,6 +43,8 @@
       @next-page="nextPage"
       @toggle-reading-mode="toggleReadingMode"
       @go-to-page="goToPage"
+      @go-to-prev-chapter="goToPrevChapter"
+      @go-to-next-chapter="goToNextChapter"
     />
 
     <!-- Плавающие кнопки навигации с счетчиком страниц -->
@@ -279,6 +281,20 @@ const canGoPrevPage = computed(() => {
     ? mangaStore.canGoPrevPage
     : mangaStore.currentPage > 0 || canGoPrevChapter.value
 })
+const goToNextChapter = async () => {
+  hideInterface()
+  await mangaStore.goToNextChapter()
+  scrollToTop()
+  showInterface()
+}
+
+const goToPrevChapter = async () => {
+  hideInterface()
+  await mangaStore.goToPrevChapter()
+  scrollToTop()
+  showInterface()
+}
+
 </script>
 
 <style scoped>

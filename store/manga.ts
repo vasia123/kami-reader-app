@@ -41,9 +41,35 @@ export const useMangaStore = defineStore('manga', () => {
     }
   }
 
+
+  const goToNextChapter = async () => {
+    if (!currentManga.value || !currentChapter.value) return;
+    
+    const currentIndex = currentChapters.value.findIndex(ch => ch.id === currentChapter.value?.id);
+    if (currentIndex < currentChapters.value.length - 1) {
+      const nextChapter = currentChapters.value[currentIndex + 1];
+      await loadChapterImages(nextChapter.id);
+    }
+  }
+
+  const goToPrevChapter = async () => {
+    if (!currentManga.value || !currentChapter.value) return;
+    
+    const currentIndex = currentChapters.value.findIndex(ch => ch.id === currentChapter.value?.id);
+    if (currentIndex > 0) {
+      const prevChapter = currentChapters.value[currentIndex - 1];
+      await loadChapterImages(prevChapter.id);
+    }
+  }
+
+  // Обновленный метод setCurrentPage
   const setCurrentPage = (page: number) => {
     currentPage.value = page;
     markPageAsRead(page);
+    // Автоматический переход к следующей главе при достижении последней страницы
+    if (page === totalPages.value - 1 && readingMode.value === 'vertical') {
+      goToNextChapter();
+    }
   }
   
   const markPageAsRead = (page: number) => {
@@ -85,6 +111,8 @@ export const useMangaStore = defineStore('manga', () => {
     setCurrentPage,
     setReadingMode,
     markPageAsRead,
-    isPageRead
+    isPageRead,
+    goToNextChapter,
+    goToPrevChapter
   }
 })
