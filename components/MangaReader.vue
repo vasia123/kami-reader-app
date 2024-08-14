@@ -21,17 +21,25 @@
       </template>
     </div>
 
+    <!-- Боковые кнопки навигации -->
+    <SideNavigationButtons
+      :can-go-prev-page="canGoPrevPage"
+      :can-go-next-page="canGoNextPage"
+      @prev-page="handlePrevPage"
+      @next-page="handleNextPage"
+    />
+
     <!-- Навигационный оверлей -->
     <MangaReaderNavOverlay
       v-bind="navOverlayProps"
       @toggle-nav-overlay="toggleNavOverlay"
       @hide-overlay="hideOverlay"
-      @prev-page="prevPage"
-      @next-page="nextPage"
+      @prev-page="handlePrevPage"
+      @next-page="handleNextPage"
       @toggle-reading-mode="toggleReadingMode"
-      @go-to-page="goToPage"
-      @go-to-prev-chapter="goToPrevChapter"
-      @go-to-next-chapter="goToNextChapter"
+      @go-to-page="handleGoToPage"
+      @go-to-prev-chapter="handleGoToPrevChapter"
+      @go-to-next-chapter="handleGoToNextChapter"
     />
 
     <!-- Плавающие кнопки навигации -->
@@ -40,8 +48,8 @@
       :can-go-prev-page="canGoPrevPage"
       :can-go-next-page="canGoNextPage"
       :page-counter="pageCounter"
-      @prev-page="prevPage"
-      @next-page="nextPage"
+      @prev-page="handlePrevPage"
+      @next-page="handleNextPage"
       @toggle-nav-overlay="toggleNavOverlay"
     />
   </div>
@@ -57,7 +65,7 @@ import { useKeyboardNavigation } from '../composables/useKeyboardNavigation'
 import MangaPageVertical from './MangaPageVertical.vue'
 import MangaPageSingle from './MangaPageSingle.vue'
 import MangaReaderNavOverlay from './MangaReaderNavOverlay.vue'
-import FloatingNavigationButtons from './FloatingNavigationButtons.vue'
+import SideNavigationButtons from './SideNavigationButtons.vue'
 
 const route = useRoute()
 const mangaStore = useMangaStore()
@@ -86,7 +94,8 @@ const {
   goToNextChapter,
   setImageRef,
   scrollToPage,
-  scrollToTop
+  scrollToTop,
+  scrollToTopAfterHeader,
 } = useMangaReader(mangaId.value, chapterId.value)
 
 // Используем composable для навигации с клавиатуры
@@ -117,6 +126,31 @@ onMounted(async () => {
 onUnmounted(() => {
   settingsStore.saveLastPosition(String(mangaId.value), String(chapterId.value), mangaStore.currentPage)
 })
+
+const handlePrevPage = () => {
+  prevPage();
+  scrollToTopAfterHeader();
+};
+
+const handleNextPage = () => {
+  nextPage();
+  scrollToTopAfterHeader();
+};
+
+const handleGoToPage = (page: number) => {
+  goToPage(page);
+  scrollToTopAfterHeader();
+};
+
+const handleGoToPrevChapter = () => {
+  goToPrevChapter();
+  scrollToTopAfterHeader();
+};
+
+const handleGoToNextChapter = () => {
+  goToNextChapter();
+  scrollToTopAfterHeader();
+};
 
 // Загрузка текущей главы
 const loadCurrentChapter = async () => {
@@ -170,5 +204,11 @@ watch(() => mangaStore.readingMode, (newMode, oldMode) => {
   background-color: theme('colors.primary');
   border-radius: 20px;
   border: 3px solid theme('colors.base-200');
+}
+
+@media (max-width: 768px) {
+  .manga-reader {
+    @apply touch-pan-y;
+  }
 }
 </style>

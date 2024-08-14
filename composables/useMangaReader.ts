@@ -16,17 +16,17 @@ export function useMangaReader(mangaId: number, chapterId: number) {
 
   const canGoPrevPage = computed(() => {
     if (mangaStore.readingMode === 'vertical') {
-      return mangaStore.currentPage === 0 && mangaStore.currentChapters.findIndex(ch => ch.id === chapterId) > 0
+      return mangaStore.currentPage > 0 || mangaStore.currentChapters.findIndex(ch => ch.id === chapterId) > 0
     }
-    return mangaStore.canGoPrevPage
+    return mangaStore.canGoPrevPage || mangaStore.currentChapters.findIndex(ch => ch.id === chapterId) > 0
   })
 
   const canGoNextPage = computed(() => {
     if (mangaStore.readingMode === 'vertical') {
-      return mangaStore.currentPage === mangaStore.totalPages - 1 && 
+      return mangaStore.currentPage < mangaStore.totalPages - 1 || 
              mangaStore.currentChapters.findIndex(ch => ch.id === chapterId) < mangaStore.currentChapters.length - 1
     }
-    return mangaStore.canGoNextPage
+    return mangaStore.canGoNextPage || mangaStore.currentChapters.findIndex(ch => ch.id === chapterId) < mangaStore.currentChapters.length - 1
   })
 
   const pageCounter = computed(() => `${mangaStore.currentPage + 1} / ${mangaStore.totalPages}`)
@@ -46,11 +46,25 @@ export function useMangaReader(mangaId: number, chapterId: number) {
     showNavOverlay.value = false
   }
 
+  const scrollToTopAfterHeader = () => {
+    nextTick(() => {
+      const header = document.querySelector('header');
+      if (header) {
+        const headerHeight = header.getBoundingClientRect().height;
+        window.scrollTo({
+          top: headerHeight,
+          behavior: 'smooth'
+        });
+      }
+    });
+  };
+
+
   const prevPage = () => {
     if (mangaStore.readingMode === 'single') {
       if (mangaStore.canGoPrevPage) {
         mangaStore.setCurrentPage(mangaStore.currentPage - 1)
-        scrollToTop()
+        scrollToTopAfterHeader()
       } else {
         goToPrevChapter()
       }
@@ -63,12 +77,21 @@ export function useMangaReader(mangaId: number, chapterId: number) {
     if (mangaStore.readingMode === 'single') {
       if (mangaStore.canGoNextPage) {
         mangaStore.setCurrentPage(mangaStore.currentPage + 1)
-        scrollToTop()
+        scrollToTopAfterHeader()
       } else {
         goToNextChapter()
       }
     } else if (canGoNextPage.value) {
       goToNextChapter()
+    }
+  }
+
+  const goToPage = (pageNumber: number) => {
+    mangaStore.setCurrentPage(pageNumber)
+    if (mangaStore.readingMode === 'vertical') {
+      scrollToPage(pageNumber)
+    } else {
+      scrollToTopAfterHeader()
     }
   }
 
@@ -78,15 +101,6 @@ export function useMangaReader(mangaId: number, chapterId: number) {
     if (newMode === 'vertical') {
       // При переключении на вертикальный режим прокручиваем к текущей странице
       nextTick(() => scrollToPage(mangaStore.currentPage))
-    } else {
-      scrollToTop()
-    }
-  }
-
-  const goToPage = (pageNumber: number) => {
-    mangaStore.setCurrentPage(pageNumber)
-    if (mangaStore.readingMode === 'vertical') {
-      scrollToPage(pageNumber)
     } else {
       scrollToTop()
     }
@@ -189,6 +203,7 @@ export function useMangaReader(mangaId: number, chapterId: number) {
     goToNextChapter,
     setImageRef,
     scrollToPage,
-    scrollToTop
+    scrollToTop,
+    scrollToTopAfterHeader,
   }
 }
