@@ -3,9 +3,12 @@
         <div v-show="isLoading" class="absolute inset-0 flex items-center justify-center bg-base-200">
             <span class="loading loading-spinner loading-lg" />
         </div>
-        <img
+        <!-- <img
 ref="imageRef" :src="image.url" :alt="`Page ${image.page}`" class="max-w-full h-auto"
-            :class="{ 'opacity-50': isRead }" @load="handleImageLoaded">
+            :class="{ 'opacity-50': isRead }" @load="handleImageLoaded"> -->
+        <img
+            ref="imageRef" :src="image.url" :alt="`Page ${image.page}`" class="max-w-full h-auto"
+            @load="handleImageLoaded">
     </div>
 </template>
 
